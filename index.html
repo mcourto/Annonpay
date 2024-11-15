@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anonymous Payment System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      padding-bottom: 120px; /* Space for console */
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .content {
+      flex: 1;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    h1 {
+      text-align: center;
+    }
+    form {
+      max-width: 400px;
+      margin: 0 auto 20px;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+    }
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #console-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 120px; /* Smaller default height */
+      background-color: #1e1e1e;
+      display: flex;
+      flex-direction: column;
+      border-top: 2px solid #333;
+    }
+    #console-header {
+      padding: 4px 10px;
+      background-color: #333;
+      cursor: ns-resize;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+      font-size: 12px;
+    }
+    #console {
+      flex: 1;
+      color: #00ff00;
+      font-family: monospace;
+      padding: 10px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+    .console-entry {
+      margin: 3px 0;
+      padding: 1px 0;
+      border-bottom: 1px solid #333;
+    }
+    .timestamp {
+      color: #888;
+    }
+    .success {
+      color: #4CAF50;
+    }
+    .error {
+      color: #f44336;
+    }
+    .info {
+      color: #2196F3;
+    }
+    #minimize-button {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
+    #minimize-button:hover {
+      background-color: #444;
+    }
+    .minimized {
+      height: 30px !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <h1>Anonymous Payment System</h1>
+    
+    <form id="loginForm">
+      <h2>Login</h2>
+      <label for="username">Username:</label>
+      <input type="text" id="username" required>
+      <label for="password">Password:</label>
+      <input type="password" id="password" required>
+      <button type="submit">Login</button>
+    </form>
+    
+    <form id="aliasForm" style="display: none;">
+      <h2>Enter Alias</h2>
+      <label for="alias">Alias:</label>
+      <input type="text" id="alias" required>
+      <button type="submit">Submit</button>
+    </form>
+    
+    <form id="paymentForm" style="display: none;">
+      <h2>Payment Details</h2>
+      <label for="cardNumber">Card Number:</label>
+      <input type="text" id="cardNumber" required>
+      <label for="expiryDate">Expiry Date:</label>
+      <input type="text" id="expiryDate" required>
+      <label for="cvv">CVV:</label>
+      <input type="text" id="cvv" required>
+      <button type="submit">Pay</button>
+    </form>
+  </div>
+
+  <div id="console-container">
+    <div id="console-header">
+      <span>Console Output</span>
+      <button id="minimize-button">_</button>
+    </div>
+    <div id="console"></div>
+  </div>
+
+  <script>
+    const consoleContainer = document.getElementById('console-container');
+    const consoleHeader = document.getElementById('console-header');
+    const consoleOutput = document.getElementById('console');
+    const minimizeButton = document.getElementById('minimize-button');
+    
+    // Resizing functionality
+    let isResizing = false;
+    let startY;
+    let startHeight;
+
+    consoleHeader.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startY = e.clientY;
+      startHeight = consoleContainer.offsetHeight;
+      
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', () => {
+        isResizing = false;
+        document.removeEventListener('mousemove', handleMouseMove);
+      });
+    });
+
+    function handleMouseMove(e) {
+      if (!isResizing) return;
+      
+      const diffY = startY - e.clientY;
+      const newHeight = Math.max(30, Math.min(startHeight + diffY, window.innerHeight - 100));
+      consoleContainer.style.height = `${newHeight}px`;
+    }
+
+    // Minimize/Maximize functionality
+    minimizeButton.addEventListener('click', () => {
+      consoleContainer.classList.toggle('minimized');
+      minimizeButton.textContent = consoleContainer.classList.contains('minimized') ? '□' : '_';
+    });
+    
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `console-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+      consoleOutput.appendChild(entry);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    const loginForm = document.getElementById('loginForm');
+    const aliasForm = document.getElementById('aliasForm');
+    const paymentForm = document.getElementById('paymentForm');
+    
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const username = document.getElementById('username').value;
+      log('Initiating login process...', 'info');
+      log(`Attempting login for user: ${username}`, 'info');
+      
+      setTimeout(() => {
+        log('Verifying credentials...', 'info');
+        setTimeout(() => {
+          log('Login successful!', 'success');
+          log('Generating session token...', 'info');
+          log('Session token created: xxxxx-xxxxx-xxxxx', 'success');
+          
+          loginForm.style.display = 'none';
+          aliasForm.style.display = 'block';
+          
+          log('Redirecting to alias entry...', 'info');
+        }, 500);
+      }, 1000);
+    });
+    
+    aliasForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const alias = document.getElementById('alias').value;
+      log(`Processing alias: ${alias}`, 'info');
+      
+      setTimeout(() => {
+        log('Verifying alias in secure database...', 'info');
+        setTimeout(() => {
+          log('Alias verified successfully', 'success');
+          log('Retrieving associated PayID...', 'info');
+          log('PayID retrieved: xxxxxx-xxxx-xxxx', 'success');
+          
+          aliasForm.style.display = 'none';
+          paymentForm.style.display = 'block';
+          
+          log('Redirecting to payment form...', 'info');
+        }, 800);
+      }, 1000);
+    });
+    
+    paymentForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      log('Initiating payment process...', 'info');
+      log('Encrypting payment details...', 'info');
+      
+      setTimeout(() => {
+        log('Payment details encrypted', 'success');
+        log('Connecting to payment gateway...', 'info');
+        
+        setTimeout(() => {
+          log('Processing payment...', 'info');
+          setTimeout(() => {
+            log('Payment successful!', 'success');
+            log('Initiating TON transfer to wallet...', 'info');
+            log('Transaction ID: 0x123456789abcdef', 'success');
+            
+            alert('Payment successful. TON will be transferred to the hardcoded wallet.');
+          }, 1000);
+        }, 800);
+      }, 1000);
+    });
+
+    // Initial console message
+    log('System initialized. Ready for user input.', 'info');
+  </script>
+</body>
+</html>
